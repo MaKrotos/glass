@@ -446,6 +446,10 @@ module.exports = {
     notifyPresetUpdate,
     getSettings,
     saveSettings,
+    async getLanguage() {
+        const settings = await getSettings();
+        return settings.language || 'en';
+    },
     getPresets,
     getPresetTemplates,
     createPreset,

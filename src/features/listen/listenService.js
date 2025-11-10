@@ -5,6 +5,7 @@ const authService = require('../common/services/authService');
 const sessionRepository = require('../common/repositories/session');
 const sttRepository = require('./stt/repositories');
 const internalBridge = require('../../bridge/internalBridge');
+const settingsService = require('../settings/settingsService');
 
 class ListenService {
     constructor() {
@@ -154,7 +155,17 @@ class ListenService {
         }
     }
 
-    async initializeSession(language = 'en') {
+    async initializeSession(language) {
+        // Если язык не передан явно, получаем его из настроек
+        if (!language) {
+            try {
+                language = await settingsService.getLanguage();
+            } catch (error) {
+                console.warn('[ListenService] Failed to get language from settings, using default "en":', error);
+                language = 'en';
+            }
+        }
+        
         if (this.isInitializingSession) {
             console.log('Session initialization already in progress.');
             return false;

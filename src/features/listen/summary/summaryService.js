@@ -4,6 +4,7 @@ const { createLLM } = require('../../common/ai/factory');
 const sessionRepository = require('../../common/repositories/session');
 const summaryRepository = require('./repositories');
 const modelStateService = require('../../common/services/modelStateService');
+const settingsService = require('../../settings/settingsService');
 
 class SummaryService {
     constructor() {
@@ -90,7 +91,10 @@ Please build upon this context while analyzing the new conversation segments.
 `;
         }
 
-        const basePrompt = getSystemPrompt('pickle_glass_analysis', '', false);
+        // Получаем язык из настроек
+        const language = await settingsService.getLanguage();
+
+        const basePrompt = getSystemPrompt('pickle_glass_analysis', '', false, language);
         const systemPrompt = basePrompt.replace('{{CONVERSATION_HISTORY}}', recentConversation);
 
         try {

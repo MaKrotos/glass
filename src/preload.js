@@ -175,6 +175,13 @@ contextBridge.exposeInMainWorld('api', {
     // Window Management
     adjustWindowHeight: (winName, height) => ipcRenderer.invoke('adjust-window-height', { winName, height }),
     
+    // Settings Management
+    getLanguage: () => ipcRenderer.invoke('settings:get-language'),
+    setLanguage: (language) => ipcRenderer.invoke('settings:set-language', language),
+    
+    // Session Management
+    changeSession: (listenButtonText) => ipcRenderer.invoke('listen:changeSession', listenButtonText),
+    
     // Listeners
     onSessionStateChanged: (callback) => ipcRenderer.on('session-state-changed', callback),
     removeOnSessionStateChanged: (callback) => ipcRenderer.removeListener('session-state-changed', callback)
@@ -230,6 +237,8 @@ contextBridge.exposeInMainWorld('api', {
     getPresets: () => ipcRenderer.invoke('settings:getPresets'),
     getAutoUpdate: () => ipcRenderer.invoke('settings:get-auto-update'),
     setAutoUpdate: (isEnabled) => ipcRenderer.invoke('settings:set-auto-update', isEnabled),
+    getLanguage: () => ipcRenderer.invoke('settings:get-language'),
+    setLanguage: (language) => ipcRenderer.invoke('settings:set-language', language),
     getContentProtectionStatus: () => ipcRenderer.invoke('get-content-protection-status'),
     toggleContentProtection: () => ipcRenderer.invoke('toggle-content-protection'),
     getCurrentShortcuts: () => ipcRenderer.invoke('settings:getCurrentShortcuts'),

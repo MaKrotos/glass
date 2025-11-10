@@ -15,6 +15,7 @@ const getWindowPool = () => {
 const sessionRepository = require('../common/repositories/session');
 const askRepository = require('./repositories');
 const { getSystemPrompt } = require('../common/prompts/promptBuilder');
+const settingsService = require('../settings/settingsService');
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('os');
@@ -254,7 +255,10 @@ class AskService {
 
             const conversationHistory = this._formatConversationForPrompt(conversationHistoryRaw);
 
-            const systemPrompt = getSystemPrompt('pickle_glass_analysis', conversationHistory, false);
+            // Получаем язык из настроек
+            const language = await settingsService.getLanguage();
+
+            const systemPrompt = getSystemPrompt('pickle_glass_analysis', conversationHistory, false, language);
 
             const messages = [
                 { role: 'system', content: systemPrompt },
@@ -307,8 +311,12 @@ class AskService {
                     console.log(`[AskService] Multimodal request failed, retrying with text-only: ${multimodalError.message}`);
                     
                     // 텍스트만으로 메시지 재구성
+                    // Получаем язык из настроек для фолбэка
+                    const fallbackLanguage = await settingsService.getLanguage();
+                    const fallbackSystemPrompt = getSystemPrompt('pickle_glass_analysis', conversationHistory, false, fallbackLanguage);
+                    
                     const textOnlyMessages = [
-                        { role: 'system', content: systemPrompt },
+                        { role: 'system', content: fallbackSystemPrompt },
                         {
                             role: 'user',
                             content: `User Request: ${userPrompt.trim()}`

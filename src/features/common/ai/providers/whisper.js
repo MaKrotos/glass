@@ -14,11 +14,12 @@ if (typeof window === 'undefined') {
 }
 
 class WhisperSTTSession extends EventEmitter {
-    constructor(model, whisperService, sessionId) {
+    constructor(model, whisperService, sessionId, language = 'auto') {
         super();
         this.model = model;
         this.whisperService = whisperService;
         this.sessionId = sessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        this.language = language;
         this.process = null;
         this.isRunning = false;
         this.audioBuffer = Buffer.alloc(0);
@@ -72,15 +73,15 @@ class WhisperSTTSession extends EventEmitter {
             }
 
             this.process = spawn(whisperPath, [
-                '-m', modelPath,
-                '-f', tempFile,
-                '--no-timestamps',
-                '--output-txt',
-                '--output-json',
-                '--language', 'auto',
-                '--threads', '4',
-                '--print-progress', 'false'
-            ]);
+                            '-m', modelPath,
+                            '-f', tempFile,
+                            '--no-timestamps',
+                            '--output-txt',
+                            '--output-json',
+                            '--language', this.language,
+                            '--threads', '4',
+                            '--print-progress', 'false'
+                        ]);
 
             let output = '';
             let errorOutput = '';
@@ -192,38 +193,39 @@ class WhisperProvider {
     }
 
     async createSTT(config) {
-        await this.initialize();
-        
-        const model = config.model || 'whisper-tiny';
-        const sessionType = config.sessionType || 'unknown';
-        console.log(`[WhisperProvider] Creating ${sessionType} STT session with model: ${model}`);
-        
-        // Create unique session ID based on type
-        const sessionId = `${sessionType}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-        const session = new WhisperSTTSession(model, this.whisperService, sessionId);
-        
-        // Log session creation
-        console.log(`[WhisperProvider] Created session: ${sessionId}`);
-        
-        const initialized = await session.initialize();
-        if (!initialized) {
-            throw new Error('Failed to initialize Whisper STT session');
+            await this.initialize();
+            
+            const model = config.model || 'whisper-tiny';
+            const language = config.language || 'auto';
+            const sessionType = config.sessionType || 'unknown';
+            console.log(`[WhisperProvider] Creating ${sessionType} STT session with model: ${model}, language: ${language}`);
+            
+            // Create unique session ID based on type
+            const sessionId = `${sessionType}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+            const session = new WhisperSTTSession(model, this.whisperService, sessionId, language);
+            
+            // Log session creation
+            console.log(`[WhisperProvider] Created session: ${sessionId}`);
+            
+            const initialized = await session.initialize();
+            if (!initialized) {
+                throw new Error('Failed to initialize Whisper STT session');
+            }
+    
+            if (config.callbacks) {
+                if (config.callbacks.onmessage) {
+                    session.on('transcription', config.callbacks.onmessage);
+                }
+                if (config.callbacks.onerror) {
+                    session.on('error', config.callbacks.onerror);
+                }
+                if (config.callbacks.onclose) {
+                    session.on('close', config.callbacks.onclose);
+                }
+            }
+    
+            return session;
         }
-
-        if (config.callbacks) {
-            if (config.callbacks.onmessage) {
-                session.on('transcription', config.callbacks.onmessage);
-            }
-            if (config.callbacks.onerror) {
-                session.on('error', config.callbacks.onerror);
-            }
-            if (config.callbacks.onclose) {
-                session.on('close', config.callbacks.onclose);
-            }
-        }
-
-        return session;
-    }
 
     async createLLM() {
         throw new Error('Whisper provider does not support LLM functionality');

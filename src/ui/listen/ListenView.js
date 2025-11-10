@@ -200,10 +200,33 @@ export class ListenView extends LitElement {
             gap: 4px;
             align-items: center;
             flex-shrink: 0;
-            width: 120px;
+            width: 160px; /* Увеличил ширину для размещения select */
             justify-content: flex-end;
             box-sizing: border-box;
             padding: 4px;
+        }
+
+        .language-select {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            padding: 2px 4px;
+            font-size: 11px;
+            cursor: pointer;
+            width: 70px; /* Фиксированная ширина для компактности */
+            height: 24px;
+            box-sizing: border-box;
+        }
+
+        select.language-select option {
+            background: #1a1a1a;
+            color: white;
+        }
+
+        .language-select:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.4);
         }
 
         .toggle-button {
@@ -427,6 +450,8 @@ export class ListenView extends LitElement {
         captureStartTime: { type: Number },
         isSessionActive: { type: Boolean },
         hasCompletedRecording: { type: Boolean },
+        currentLanguage: { type: String },
+        availableLanguages: { type: Array },
     };
 
     constructor() {
@@ -445,6 +470,19 @@ export class ListenView extends LitElement {
         this.copyTimeout = null;
 
         this.adjustWindowHeight = this.adjustWindowHeight.bind(this);
+        
+        // Language properties
+        this.currentLanguage = 'en';
+        this.availableLanguages = [
+            { code: 'en', name: 'English' },
+            { code: 'ru', name: 'Русский' },
+            { code: 'es', name: 'Español' },
+            { code: 'fr', name: 'Français' },
+            { code: 'de', name: 'Deutsch' },
+            { code: 'ja', name: '日本語' },
+            { code: 'ko', name: '한국어' },
+            { code: 'zh', name: '中文' }
+        ];
     }
 
     connectedCallback() {
@@ -476,6 +514,20 @@ export class ListenView extends LitElement {
                     this.requestUpdate();
                 }
             });
+            
+            // Add listener for language changes from settings
+            this._settingsUpdatedListener = (event) => {
+                this.loadCurrentLanguage();
+            };
+            window.api.settingsView.onSettingsUpdated(this._settingsUpdatedListener);
+            
+            // Add listener for language changes from other components
+            this._languageChangeListener = (event) => {
+                const { language } = event.detail;
+                this.currentLanguage = language;
+                this.requestUpdate();
+            };
+            this.addEventListener('language-changed', this._languageChangeListener);
         }
     }
 
@@ -489,6 +541,16 @@ export class ListenView extends LitElement {
         }
         if (this.copyTimeout) {
             clearTimeout(this.copyTimeout);
+        }
+        
+        // Remove settings updated listener
+        if (this._settingsUpdatedListener && window.api) {
+            window.api.settingsView.removeOnSettingsUpdated(this._settingsUpdatedListener);
+        }
+        
+        // Remove language change listener
+        if (this._languageChangeListener) {
+            this.removeEventListener('language-changed', this._languageChangeListener);
         }
     }
 
@@ -591,6 +653,50 @@ export class ListenView extends LitElement {
         }
     }
 
+    async handleLanguageChange(e) {
+        if (!window.api) return;
+        
+        const newLanguage = e.target.value;
+        const previousLanguage = this.currentLanguage;
+        this.currentLanguage = newLanguage;
+        this.requestUpdate();
+        
+        try {
+            // Save the new language setting
+            await window.api.listenView.setLanguage(newLanguage);
+            console.log(`[ListenView] Language changed to: ${newLanguage}`);
+            
+            // Dispatch event to notify other components about language change
+            const event = new CustomEvent('language-changed', {
+                detail: { language: newLanguage },
+                bubbles: true,
+                composed: true
+            });
+            this.dispatchEvent(event);
+            
+            // If a session is active, we need to restart it with the new language
+            if (this.isSessionActive) {
+                console.log('[ListenView] Session is active, restarting with new language...');
+                
+                // Stop the current session
+                await window.api.listenView.changeSession('Stop');
+                
+                // Add a small delay to ensure the session is fully closed
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Start a new session with the new language
+                await window.api.listenView.changeSession('Listen');
+                
+                console.log('[ListenView] Session restarted with new language');
+            }
+        } catch (error) {
+            console.error('[ListenView] Error changing language:', error);
+            // Revert to previous language on error
+            this.currentLanguage = previousLanguage;
+            this.requestUpdate();
+        }
+    }
+
     adjustWindowHeightThrottled() {
         if (this.isThrottled) {
             return;
@@ -621,6 +727,26 @@ export class ListenView extends LitElement {
     firstUpdated() {
         super.firstUpdated();
         setTimeout(() => this.adjustWindowHeight(), 200);
+        // Load current language
+        this.loadCurrentLanguage();
+    }
+    
+    async loadCurrentLanguage() {
+        if (!window.api) return;
+        try {
+            const language = await window.api.listenView.getLanguage();
+            this.currentLanguage = language;
+            // Dispatch event to notify other components about language change
+            const event = new CustomEvent('language-changed', {
+                detail: { language },
+                bubbles: true,
+                composed: true
+            });
+            this.dispatchEvent(event);
+            this.requestUpdate();
+        } catch (error) {
+            console.error('[ListenView] Error loading language:', error);
+        }
     }
 
     render() {
@@ -639,6 +765,13 @@ export class ListenView extends LitElement {
                         <span class="bar-left-text-content ${this.isAnimating ? 'slide-in' : ''}">${displayText}</span>
                     </div>
                     <div class="bar-controls">
+                        <!-- Выбор языка -->
+                        <select class="language-select" @change=${this.handleLanguageChange} .value=${this.currentLanguage}>
+                            ${this.availableLanguages.map(lang => html`
+                                <option value="${lang.code}">${lang.code.toUpperCase()}</option>
+                            `)}
+                        </select>
+                        
                         <button class="toggle-button" @click=${this.toggleViewMode}>
                             ${this.viewMode === 'insights'
                                 ? html`

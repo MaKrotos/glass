@@ -17,12 +17,14 @@ module.exports = {
   // Renderer로부터의 요청을 수신하고 서비스로 전달
   initialize() {
     // Settings Service
-    ipcMain.handle('settings:getPresets', async () => await settingsService.getPresets());
-    ipcMain.handle('settings:get-auto-update', async () => await settingsService.getAutoUpdateSetting());
-    ipcMain.handle('settings:set-auto-update', async (event, isEnabled) => await settingsService.setAutoUpdateSetting(isEnabled));  
-    ipcMain.handle('settings:get-model-settings', async () => await settingsService.getModelSettings());
-    ipcMain.handle('settings:clear-api-key', async (e, { provider }) => await settingsService.clearApiKey(provider));
-    ipcMain.handle('settings:set-selected-model', async (e, { type, modelId }) => await settingsService.setSelectedModel(type, modelId));    
+        ipcMain.handle('settings:getPresets', async () => await settingsService.getPresets());
+        ipcMain.handle('settings:get-auto-update', async () => await settingsService.getAutoUpdateSetting());
+        ipcMain.handle('settings:set-auto-update', async (event, isEnabled) => await settingsService.setAutoUpdateSetting(isEnabled));
+        ipcMain.handle('settings:get-model-settings', async () => await settingsService.getModelSettings());
+        ipcMain.handle('settings:clear-api-key', async (e, { provider }) => await settingsService.clearApiKey(provider));
+        ipcMain.handle('settings:set-selected-model', async (e, { type, modelId }) => await settingsService.setSelectedModel(type, modelId));
+        ipcMain.handle('settings:get-language', async () => await settingsService.getLanguage());
+        ipcMain.handle('settings:set-language', async (event, language) => await settingsService.saveSettings({ language }));
 
     ipcMain.handle('settings:get-ollama-status', async () => await settingsService.getOllamaStatus());
     ipcMain.handle('settings:ensure-ollama-ready', async () => await settingsService.ensureOllamaReady());

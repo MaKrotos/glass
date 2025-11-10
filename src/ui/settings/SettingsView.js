@@ -509,37 +509,49 @@ export class SettingsView extends LitElement {
     //////// after_modelStateService ////////
 
     constructor() {
-        super();
-        //////// after_modelStateService ////////
-        this.shortcuts = {};
-        this.firebaseUser = null;
-        this.apiKeys = { openai: '', gemini: '', anthropic: '', whisper: '' };
-        this.providerConfig = {};
-        this.isLoading = true;
-        this.isContentProtectionOn = true;
-        this.saving = false;
-        this.availableLlmModels = [];
-        this.availableSttModels = [];
-        this.selectedLlm = null;
-        this.selectedStt = null;
-        this.isLlmListVisible = false;
-        this.isSttListVisible = false;
-        this.presets = [];
-        this.selectedPreset = null;
-        this.showPresets = false;
-        // Ollama related
-        this.ollamaStatus = { installed: false, running: false };
-        this.ollamaModels = [];
-        this.installingModels = {}; // { modelName: progress }
-        // Whisper related
-        this.whisperModels = [];
-        this.whisperProgressTracker = null; // Will be initialized when needed
-        this.handleUsePicklesKey = this.handleUsePicklesKey.bind(this)
-        this.autoUpdateEnabled = true;
-        this.autoUpdateLoading = true;
-        this.loadInitialData();
-        //////// after_modelStateService ////////
-    }
+            super();
+            //////// after_modelStateService ////////
+            this.shortcuts = {};
+            this.firebaseUser = null;
+            this.apiKeys = { openai: '', gemini: '', anthropic: '', whisper: '' };
+            this.providerConfig = {};
+            this.isLoading = true;
+            this.isContentProtectionOn = true;
+            this.saving = false;
+            this.availableLlmModels = [];
+            this.availableSttModels = [];
+            this.selectedLlm = null;
+            this.selectedStt = null;
+            this.isLlmListVisible = false;
+            this.isSttListVisible = false;
+            this.presets = [];
+            this.selectedPreset = null;
+            this.showPresets = false;
+            // Ollama related
+            this.ollamaStatus = { installed: false, running: false };
+            this.ollamaModels = [];
+            this.installingModels = {}; // { modelName: progress }
+            // Whisper related
+            this.whisperModels = [];
+            this.whisperProgressTracker = null; // Will be initialized when needed
+            this.handleUsePicklesKey = this.handleUsePicklesKey.bind(this)
+            this.autoUpdateEnabled = true;
+            this.autoUpdateLoading = true;
+            // Language related
+            this.currentLanguage = 'en';
+            this.availableLanguages = [
+                { code: 'en', name: 'English' },
+                { code: 'ru', name: 'Русский' },
+                { code: 'es', name: 'Español' },
+                { code: 'fr', name: 'Français' },
+                { code: 'de', name: 'Deutsch' },
+                { code: 'ja', name: '日本語' },
+                { code: 'ko', name: '한국어' },
+                { code: 'zh', name: '中文' }
+            ];
+            this.loadInitialData();
+            //////// after_modelStateService ////////
+        }
 
     async loadAutoUpdateSetting() {
         if (!window.api) return;
@@ -609,46 +621,48 @@ export class SettingsView extends LitElement {
 
     //////// after_modelStateService ////////
     async loadInitialData() {
-        if (!window.api) return;
-        this.isLoading = true;
-        try {
-            // Load essential data first
-            const [userState, modelSettings, presets, contentProtection, shortcuts] = await Promise.all([
-                window.api.settingsView.getCurrentUser(),
-                window.api.settingsView.getModelSettings(), // Facade call
-                window.api.settingsView.getPresets(),
-                window.api.settingsView.getContentProtectionStatus(),
-                window.api.settingsView.getCurrentShortcuts()
-            ]);
-            
-            if (userState && userState.isLoggedIn) this.firebaseUser = userState;
-            
-            if (modelSettings.success) {
-                const { config, storedKeys, availableLlm, availableStt, selectedModels } = modelSettings.data;
-                this.providerConfig = config;
-                this.apiKeys = storedKeys;
-                this.availableLlmModels = availableLlm;
-                this.availableSttModels = availableStt;
-                this.selectedLlm = selectedModels.llm;
-                this.selectedStt = selectedModels.stt;
+            if (!window.api) return;
+            this.isLoading = true;
+            try {
+                // Load essential data first
+                const [userState, modelSettings, presets, contentProtection, shortcuts, language] = await Promise.all([
+                    window.api.settingsView.getCurrentUser(),
+                    window.api.settingsView.getModelSettings(), // Facade call
+                    window.api.settingsView.getPresets(),
+                    window.api.settingsView.getContentProtectionStatus(),
+                    window.api.settingsView.getCurrentShortcuts(),
+                    window.api.settingsView.getLanguage()
+                ]);
+                
+                if (userState && userState.isLoggedIn) this.firebaseUser = userState;
+                
+                if (modelSettings.success) {
+                    const { config, storedKeys, availableLlm, availableStt, selectedModels } = modelSettings.data;
+                    this.providerConfig = config;
+                    this.apiKeys = storedKeys;
+                    this.availableLlmModels = availableLlm;
+                    this.availableSttModels = availableStt;
+                    this.selectedLlm = selectedModels.llm;
+                    this.selectedStt = selectedModels.stt;
+                }
+    
+                this.presets = presets || [];
+                this.isContentProtectionOn = contentProtection;
+                this.shortcuts = shortcuts || {};
+                this.currentLanguage = language || 'en';
+                if (this.presets.length > 0) {
+                    const firstUserPreset = this.presets.find(p => p.is_default === 0);
+                    if (firstUserPreset) this.selectedPreset = firstUserPreset;
+                }
+                
+                // Load LocalAI status asynchronously to improve initial load time
+                this.loadLocalAIStatus();
+            } catch (error) {
+                console.error('Error loading initial settings data:', error);
+            } finally {
+                this.isLoading = false;
             }
-
-            this.presets = presets || [];
-            this.isContentProtectionOn = contentProtection;
-            this.shortcuts = shortcuts || {};
-            if (this.presets.length > 0) {
-                const firstUserPreset = this.presets.find(p => p.is_default === 0);
-                if (firstUserPreset) this.selectedPreset = firstUserPreset;
-            }
-            
-            // Load LocalAI status asynchronously to improve initial load time
-            this.loadLocalAIStatus();
-        } catch (error) {
-            console.error('Error loading initial settings data:', error);
-        } finally {
-            this.isLoading = false;
         }
-    }
 
 
     async handleSaveKey(provider) {
@@ -920,6 +934,14 @@ export class SettingsView extends LitElement {
         this.loadAutoUpdateSetting();
         // Force one height calculation immediately (innerHeight may be 0 at first)
         setTimeout(() => this.updateScrollHeight(), 0);
+        
+        // Add event listener for language changes
+        this._languageChangeListener = (event) => {
+            const { language } = event.detail;
+            this.currentLanguage = language;
+            this.requestUpdate();
+        };
+        this.addEventListener('language-changed', this._languageChangeListener);
     }
 
     disconnectedCallback() {
@@ -927,6 +949,11 @@ export class SettingsView extends LitElement {
         this.cleanupEventListeners();
         this.cleanupIpcListeners();
         this.cleanupWindowResize();
+        
+        // Remove language change listener
+        if (this._languageChangeListener) {
+            this.removeEventListener('language-changed', this._languageChangeListener);
+        }
         
         // Cancel any ongoing Ollama installations when component is destroyed
         const installingModels = Object.keys(this.installingModels);
@@ -1149,32 +1176,55 @@ export class SettingsView extends LitElement {
     }
 
     async handleOllamaShutdown() {
-        console.log('[SettingsView] Shutting down Ollama service...');
-        
-        if (!window.api) return;
-        
-        try {
-            // Show loading state
-            this.ollamaStatus = { ...this.ollamaStatus, running: false };
-            this.requestUpdate();
+            console.log('[SettingsView] Shutting down Ollama service...');
             
-            const result = await window.api.settingsView.shutdownOllama(false); // Graceful shutdown
+            if (!window.api) return;
             
-            if (result.success) {
-                console.log('[SettingsView] Ollama shut down successfully');
-                // Refresh status to reflect the change
-                await this.refreshOllamaStatus();
-            } else {
-                console.error('[SettingsView] Failed to shutdown Ollama:', result.error);
+            try {
+                // Show loading state
+                this.ollamaStatus = { ...this.ollamaStatus, running: false };
+                this.requestUpdate();
+                
+                const result = await window.api.settingsView.shutdownOllama(false); // Graceful shutdown
+                
+                if (result.success) {
+                    console.log('[SettingsView] Ollama shut down successfully');
+                    // Refresh status to reflect the change
+                    await this.refreshOllamaStatus();
+                } else {
+                    console.error('[SettingsView] Failed to shutdown Ollama:', result.error);
+                    // Restore previous state on error
+                    await this.refreshOllamaStatus();
+                }
+            } catch (error) {
+                console.error('[SettingsView] Error during Ollama shutdown:', error);
                 // Restore previous state on error
                 await this.refreshOllamaStatus();
             }
-        } catch (error) {
-            console.error('[SettingsView] Error during Ollama shutdown:', error);
-            // Restore previous state on error
-            await this.refreshOllamaStatus();
         }
-    }
+    
+        async handleSetLanguage(language) {
+            console.log('[SettingsView] Setting language to:', language);
+            this.saving = true;
+            this.requestUpdate();
+            try {
+                await window.api.settingsView.setLanguage(language);
+                this.currentLanguage = language;
+                // Dispatch event to notify other components about language change
+                const event = new CustomEvent('language-changed', {
+                    detail: { language },
+                    bubbles: true,
+                    composed: true
+                });
+                this.dispatchEvent(event);
+                // Reload settings to ensure consistency
+                await this.loadInitialData();
+            } catch (error) {
+                console.error('[SettingsView] Error setting language:', error);
+            }
+            this.saving = false;
+            this.requestUpdate();
+        }
 
     //////// after_modelStateService ////////
     render() {
@@ -1368,12 +1418,23 @@ export class SettingsView extends LitElement {
 
                 ${apiKeyManagementHTML}
                 ${modelSelectionHTML}
-
-                <div class="buttons-section" style="border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 6px; margin-top: 6px;">
-                    <button class="settings-button full-width" @click=${this.openShortcutEditor}>
-                        Edit Shortcuts
-                    </button>
-                </div>
+                
+                                <div class="api-key-section">
+                                    <div class="provider-key-group">
+                                        <label>Language</label>
+                                        <select class="model-dropdown" @change=${(e) => this.handleSetLanguage(e.target.value)} .value=${this.currentLanguage}>
+                                            ${this.availableLanguages.map(lang => html`
+                                                <option value="${lang.code}">${lang.name}</option>
+                                            `)}
+                                        </select>
+                                    </div>
+                                </div>
+                
+                                <div class="buttons-section" style="border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 6px; margin-top: 6px;">
+                                    <button class="settings-button full-width" @click=${this.openShortcutEditor}>
+                                        Edit Shortcuts
+                                    </button>
+                                </div>
 
                 
                 <div class="shortcuts-section">
