@@ -3,6 +3,7 @@ import { SettingsView } from '../settings/SettingsView.js';
 import { ListenView } from '../listen/ListenView.js';
 import { AskView } from '../ask/AskView.js';
 import { ShortcutSettingsView } from '../settings/ShortCutSettingsView.js';
+import { t } from '../i18n/i18n.js';
 
 import '../listen/audioCore/renderer.js';
 
@@ -38,14 +39,13 @@ export class PickleGlassApp extends LitElement {
         currentResponseIndex: { type: Number },
         isMainViewVisible: { type: Boolean },
         selectedProfile: { type: String },
-        selectedLanguage: { type: String },
         selectedScreenshotInterval: { type: String },
         selectedImageQuality: { type: String },
         isClickThrough: { type: Boolean, state: true },
         layoutMode: { type: String },
         _viewInstances: { type: Object, state: true },
         _isClickThrough: { state: true },
-        structuredData: { type: Object }, 
+        structuredData: { type: Object },
     };
 
     constructor() {
@@ -54,16 +54,6 @@ export class PickleGlassApp extends LitElement {
         this.currentView = urlParams.get('view') || 'listen';
         this.currentResponseIndex = -1;
         this.selectedProfile = localStorage.getItem('selectedProfile') || 'interview';
-        
-        // Language format migration for legacy users
-        let lang = localStorage.getItem('selectedLanguage') || 'en';
-        if (lang.includes('-')) {
-            const newLang = lang.split('-')[0];
-            console.warn(`[Migration] Correcting language format from "${lang}" to "${newLang}".`);
-            localStorage.setItem('selectedLanguage', newLang);
-            lang = newLang;
-        }
-        this.selectedLanguage = lang;
 
         this.selectedScreenshotInterval = localStorage.getItem('selectedScreenshotInterval') || '5';
         this.selectedImageQuality = localStorage.getItem('selectedImageQuality') || 'medium';
@@ -98,23 +88,20 @@ export class PickleGlassApp extends LitElement {
                 });
             }
         }
+// Only update localStorage when these specific properties change
+if (changedProperties.has('selectedProfile')) {
+    localStorage.setItem('selectedProfile', this.selectedProfile);
+}
+if (changedProperties.has('selectedScreenshotInterval')) {
+    localStorage.setItem('selectedScreenshotInterval', this.selectedScreenshotInterval);
+}
+if (changedProperties.has('selectedImageQuality')) {
+    localStorage.setItem('selectedImageQuality', this.selectedImageQuality);
+}
+if (changedProperties.has('layoutMode')) {
+    this.updateLayoutMode();
+}
 
-        // Only update localStorage when these specific properties change
-        if (changedProperties.has('selectedProfile')) {
-            localStorage.setItem('selectedProfile', this.selectedProfile);
-        }
-        if (changedProperties.has('selectedLanguage')) {
-            localStorage.setItem('selectedLanguage', this.selectedLanguage);
-        }
-        if (changedProperties.has('selectedScreenshotInterval')) {
-            localStorage.setItem('selectedScreenshotInterval', this.selectedScreenshotInterval);
-        }
-        if (changedProperties.has('selectedImageQuality')) {
-            localStorage.setItem('selectedImageQuality', this.selectedImageQuality);
-        }
-        if (changedProperties.has('layoutMode')) {
-            this.updateLayoutMode();
-        }
     }
 
     async handleClose() {
@@ -122,9 +109,6 @@ export class PickleGlassApp extends LitElement {
             await window.api.common.quitApplication();
         }
     }
-
-
-
 
     render() {
         switch (this.currentView) {
@@ -140,9 +124,7 @@ export class PickleGlassApp extends LitElement {
             case 'settings':
                 return html`<settings-view
                     .selectedProfile=${this.selectedProfile}
-                    .selectedLanguage=${this.selectedLanguage}
                     .onProfileChange=${profile => (this.selectedProfile = profile)}
-                    .onLanguageChange=${lang => (this.selectedLanguage = lang)}
                 ></settings-view>`;
             case 'shortcut-settings':
                 return html`<shortcut-settings-view></shortcut-settings-view>`;

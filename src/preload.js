@@ -114,7 +114,8 @@ contextBridge.exposeInMainWorld('api', {
     
     // Generic invoke (for dynamic channel names)
     // invoke: (channel, ...args) => ipcRenderer.invoke(channel, ...args),
-    sendListenButtonClick: (listenButtonText) => ipcRenderer.invoke('listen:changeSession', listenButtonText),
+    // Отправляем статус сессии вместо локализованного текста кнопки
+    sendListenButtonClick: (sessionStatus) => ipcRenderer.invoke('listen:changeSession', sessionStatus),
     sendAskButtonClick: () => ipcRenderer.invoke('ask:toggleAskButton'),
     sendToggleAllWindowsVisibility: () => ipcRenderer.invoke('shortcut:toggleAllWindowsVisibility'),
     
@@ -180,7 +181,8 @@ contextBridge.exposeInMainWorld('api', {
     setLanguage: (language) => ipcRenderer.invoke('settings:set-language', language),
     
     // Session Management
-    changeSession: (listenButtonText) => ipcRenderer.invoke('listen:changeSession', listenButtonText),
+    // Используем статус сессии вместо локализованного текста кнопки
+    changeSession: (sessionStatus) => ipcRenderer.invoke('listen:changeSession', sessionStatus),
     
     // Listeners
     onSessionStateChanged: (callback) => ipcRenderer.on('session-state-changed', callback),

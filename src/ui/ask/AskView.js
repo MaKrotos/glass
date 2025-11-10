@@ -1,5 +1,6 @@
 import { html, css, LitElement } from '../../ui/assets/lit-core-2.7.4.min.js';
 import { parser, parser_write, parser_end, default_renderer } from '../../ui/assets/smd.js';
+import { t } from '../i18n/i18n.js';
 
 export class AskView extends LitElement {
     static properties = {
@@ -718,7 +719,7 @@ export class AskView extends LitElement {
         this.isLoading = false;
         this.copyState = 'idle';
         this.showTextInput = true;
-        this.headerText = 'AI Response';
+        this.headerText = t('aiResponse');
         this.headerAnimating = false;
         this.isStreaming = false;
 
@@ -918,7 +919,7 @@ export class AskView extends LitElement {
         this.currentQuestion = '';
         this.isLoading = false;
         this.isStreaming = false;
-        this.headerText = 'AI Response';
+        this.headerText = t('aiResponse');
         this.showTextInput = true;
         this.lastProcessedLength = 0;
         this.smdParser = null;
@@ -1008,7 +1009,7 @@ export class AskView extends LitElement {
         
         // If there is no response, show empty state
         if (!this.currentResponse) {
-            responseContainer.innerHTML = `<div class="empty-state">...</div>`;
+            responseContainer.innerHTML = `<div class="empty-state">${t('emptyState')}</div>`;
             this.resetStreamingParser();
             return;
         }
@@ -1139,14 +1140,14 @@ export class AskView extends LitElement {
     }
 
     startHeaderAnimation() {
-        this.animateHeaderText('analyzing screen...');
+        this.animateHeaderText(t('analyzingScreen'));
 
         if (this.headerAnimationTimeout) {
             clearTimeout(this.headerAnimationTimeout);
         }
 
         this.headerAnimationTimeout = setTimeout(() => {
-            this.animateHeaderText('thinking...');
+            this.animateHeaderText(t('thinking'));
         }, 1500);
     }
 
@@ -1330,7 +1331,7 @@ export class AskView extends LitElement {
 
     render() {
         const hasResponse = this.isLoading || this.currentResponse || this.isStreaming;
-        const headerText = this.isLoading ? 'Thinking...' : 'AI Response';
+        const headerText = this.isLoading ? t('thinking') : t('aiResponse');
 
         return html`
             <div class="ask-container">
@@ -1385,7 +1386,7 @@ export class AskView extends LitElement {
                     <input
                         type="text"
                         id="textInput"
-                        placeholder="Ask about your screen or audio"
+                        placeholder=${t('askPlaceholder')}
                         @keydown=${this.handleTextKeydown}
                         @focus=${this.handleInputFocus}
                     />
@@ -1393,7 +1394,7 @@ export class AskView extends LitElement {
                         class="submit-btn"
                         @click=${this.handleSendText}
                     >
-                        <span class="btn-label">Submit</span>
+                        <span class="btn-label">${t('submit')}</span>
                         <span class="btn-icon">
                             ↵
                         </span>

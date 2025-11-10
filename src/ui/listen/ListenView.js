@@ -1,6 +1,7 @@
 import { html, css, LitElement } from '../assets/lit-core-2.7.4.min.js';
 import './stt/SttView.js';
 import './summary/SummaryView.js';
+import { t, setLanguage, getAvailableLanguages } from '../i18n/i18n.js';
 
 export class ListenView extends LitElement {
     static styles = css`
@@ -474,14 +475,14 @@ export class ListenView extends LitElement {
         // Language properties
         this.currentLanguage = 'en';
         this.availableLanguages = [
-            { code: 'en', name: 'English' },
-            { code: 'ru', name: 'Русский' },
-            { code: 'es', name: 'Español' },
-            { code: 'fr', name: 'Français' },
-            { code: 'de', name: 'Deutsch' },
-            { code: 'ja', name: '日本語' },
-            { code: 'ko', name: '한국어' },
-            { code: 'zh', name: '中文' }
+            { code: 'en', name: t('english') },
+            { code: 'ru', name: t('russian') },
+            { code: 'es', name: t('spanish') },
+            { code: 'fr', name: t('french') },
+            { code: 'de', name: t('german') },
+            { code: 'ja', name: t('japanese') },
+            { code: 'ko', name: t('korean') },
+            { code: 'zh', name: t('chinese') }
         ];
     }
 
@@ -595,13 +596,13 @@ export class ListenView extends LitElement {
                 const targetHeight = Math.min(700, idealHeight);
 
                 console.log(
-                    `[Height Adjusted] Mode: ${this.viewMode}, TopBar: ${topBarHeight}px, Content: ${contentHeight}px, Ideal: ${idealHeight}px, Target: ${targetHeight}px`
+                    `[Height Adjusted] ${t('mode')}: ${this.viewMode}, ${t('topBar')}: ${topBarHeight}px, ${t('content')}: ${contentHeight}px, ${t('ideal')}: ${idealHeight}px, ${t('target')}: ${targetHeight}px`
                 );
 
                 window.api.listenView.adjustWindowHeight('listen', targetHeight);
             })
             .catch(error => {
-                console.error('Error in adjustWindowHeight:', error);
+                console.error(`${t('errorInAdjustWindowHeight')}`, error);
             });
     }
 
@@ -635,7 +636,7 @@ export class ListenView extends LitElement {
 
         try {
             await navigator.clipboard.writeText(textToCopy);
-            console.log('Content copied to clipboard');
+            console.log(t('contentCopiedToClipboard'));
 
             this.copyState = 'copied';
             this.requestUpdate();
@@ -649,7 +650,7 @@ export class ListenView extends LitElement {
                 this.requestUpdate();
             }, 1500);
         } catch (err) {
-            console.error('Failed to copy:', err);
+            console.error(`${t('failedToCopy')}`, err);
         }
     }
 
@@ -664,7 +665,7 @@ export class ListenView extends LitElement {
         try {
             // Save the new language setting
             await window.api.listenView.setLanguage(newLanguage);
-            console.log(`[ListenView] Language changed to: ${newLanguage}`);
+            console.log(`[ListenView] ${t('languageChangedTo')}: ${newLanguage}`);
             
             // Dispatch event to notify other components about language change
             const event = new CustomEvent('language-changed', {
@@ -676,21 +677,22 @@ export class ListenView extends LitElement {
             
             // If a session is active, we need to restart it with the new language
             if (this.isSessionActive) {
-                console.log('[ListenView] Session is active, restarting with new language...');
+                console.log(`[ListenView] ${t('sessionIsActiveRestarting')}`);
                 
                 // Stop the current session
-                await window.api.listenView.changeSession('Stop');
+                // Используем статус сессии вместо локализованного текста
+                await window.api.listenView.changeSession('inSession');
                 
                 // Add a small delay to ensure the session is fully closed
                 await new Promise(resolve => setTimeout(resolve, 500));
                 
                 // Start a new session with the new language
-                await window.api.listenView.changeSession('Listen');
+                await window.api.listenView.changeSession('beforeSession');
                 
-                console.log('[ListenView] Session restarted with new language');
+                console.log(`[ListenView] ${t('sessionRestartedWithNewLanguage')}`);
             }
         } catch (error) {
-            console.error('[ListenView] Error changing language:', error);
+            console.error(`[ListenView] ${t('errorChangingLanguage')}`, error);
             // Revert to previous language on error
             this.currentLanguage = previousLanguage;
             this.requestUpdate();
@@ -745,18 +747,18 @@ export class ListenView extends LitElement {
             this.dispatchEvent(event);
             this.requestUpdate();
         } catch (error) {
-            console.error('[ListenView] Error loading language:', error);
+            console.error(`[ListenView] ${t('errorLoadingLanguage')}`, error);
         }
     }
 
     render() {
         const displayText = this.isHovering
             ? this.viewMode === 'transcript'
-                ? 'Copy Transcript'
-                : 'Copy Glass Analysis'
+                ? t('copyTranscript')
+                : t('copyGlassAnalysis')
             : this.viewMode === 'insights'
-            ? `Live insights`
-            : `Glass is Listening ${this.elapsedTime}`;
+            ? t('liveInsights')
+            : `${t('glassIsListening')} ${this.elapsedTime}`;
 
         return html`
             <div class="assistant-container">
@@ -768,7 +770,7 @@ export class ListenView extends LitElement {
                         <!-- Выбор языка -->
                         <select class="language-select" @change=${this.handleLanguageChange} .value=${this.currentLanguage}>
                             ${this.availableLanguages.map(lang => html`
-                                <option value="${lang.code}">${lang.code.toUpperCase()}</option>
+                                <option value="${lang.code}">${lang.name}</option>
                             `)}
                         </select>
                         
@@ -779,14 +781,14 @@ export class ListenView extends LitElement {
                                           <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
                                           <circle cx="12" cy="12" r="3" />
                                       </svg>
-                                      <span>Show Transcript</span>
+                                      <span>${t('showTranscript')}</span>
                                   `
                                 : html`
                                       <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                           <path d="M9 11l3 3L22 4" />
                                           <path d="M22 12v7a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h11" />
                                       </svg>
-                                      <span>Show Insights</span>
+                                      <span>${t('showInsights')}</span>
                                   `}
                         </button>
                         <button

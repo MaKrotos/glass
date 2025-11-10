@@ -1,4 +1,5 @@
 import { html, css, LitElement } from '../../assets/lit-core-2.7.4.min.js';
+import { t } from '../../i18n/i18n.js';
 
 export class SummaryView extends LitElement {
     static styles = css`
@@ -465,9 +466,9 @@ export class SummaryView extends LitElement {
         return html`
             <div class="insights-container">
                 ${!hasAnyContent
-                    ? html`<div class="empty-state">No insights yet...</div>`
+                    ? html`<div class="empty-state">${t('summary.noInsights')}</div>`
                     : html`
-                        <insights-title>Current Summary</insights-title>
+                        <insights-title>${t('summary.currentSummary')}</insights-title>
                         ${data.summary.length > 0
                             ? data.summary
                                   .slice(0, 5)
@@ -483,7 +484,7 @@ export class SummaryView extends LitElement {
                                           </div>
                                       `
                                   )
-                            : html` <div class="request-item">No content yet...</div> `}
+                            : html` <div class="request-item">${t('summary.noContent')}</div> `}
                         ${data.topic.header
                             ? html`
                                   <insights-title>${data.topic.header}</insights-title>
@@ -505,7 +506,7 @@ export class SummaryView extends LitElement {
                             : ''}
                         ${data.actions.length > 0
                             ? html`
-                                  <insights-title>Actions</insights-title>
+                                  <insights-title>${t('summary.actions')}</insights-title>
                                   ${data.actions
                                       .slice(0, 5)
                                       .map(
@@ -524,7 +525,7 @@ export class SummaryView extends LitElement {
                             : ''}
                         ${this.hasCompletedRecording && data.followUps && data.followUps.length > 0
                             ? html`
-                                  <insights-title>Follow-Ups</insights-title>
+                                  <insights-title>${t('summary.followUps')}</insights-title>
                                   ${data.followUps.map(
                                       (followUp, index) => html`
                                           <div

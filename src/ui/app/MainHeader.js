@@ -1,4 +1,5 @@
 import { html, css, LitElement } from '../assets/lit-core-2.7.4.min.js';
+import { t } from '../i18n/i18n.js';
 
 export class MainHeader extends LitElement {
     static properties = {
@@ -356,15 +357,15 @@ export class MainHeader extends LitElement {
         this.dragState = null;
         this.wasJustDragged = false;
     }
-
-    _getListenButtonText(status) {
-        switch (status) {
-            case 'beforeSession': return 'Listen';
-            case 'inSession'   : return 'Stop';
-            case 'afterSession': return 'Done';
-            default            : return 'Listen';
-        }
+_getListenButtonText(status) {
+    switch (status) {
+        case 'beforeSession': return t('listen');
+        case 'inSession'   : return t('stop');
+        case 'afterSession': return t('done');
+        default            : return t('listen');
     }
+}
+
 
     async handleMouseDown(e) {
         e.preventDefault();
@@ -475,12 +476,14 @@ export class MainHeader extends LitElement {
 
             this._sessionStateTextListener = (event, { success }) => {
                 if (success) {
+                    // Обновляем статус сессии в зависимости от текущего состояния
                     this.listenSessionStatus = ({
                         beforeSession: 'inSession',
                         inSession: 'afterSession',
                         afterSession: 'beforeSession',
                     })[this.listenSessionStatus] || 'beforeSession';
                 } else {
+                    // В случае ошибки возвращаемся к начальному состоянию
                     this.listenSessionStatus = 'beforeSession';
                 }
                 this.isTogglingSession = false; // ✨ 로딩 상태만 해제
@@ -540,9 +543,9 @@ export class MainHeader extends LitElement {
         this.isTogglingSession = true;
 
         try {
-            const listenButtonText = this._getListenButtonText(this.listenSessionStatus);
+            // Передаем статус сессии вместо локализованного текста кнопки
             if (window.api) {
-                await window.api.mainHeader.sendListenButtonClick(listenButtonText);
+                await window.api.mainHeader.sendListenButtonClick(this.listenSessionStatus);
             }
         } catch (error) {
             console.error('IPC invoke for session change failed:', error);
@@ -601,11 +604,12 @@ export class MainHeader extends LitElement {
     render() {
         const listenButtonText = this._getListenButtonText(this.listenSessionStatus);
     
+        // Используем статус сессии вместо локализованного текста для определения классов кнопки
         const buttonClasses = {
-            active: listenButtonText === 'Stop',
-            done: listenButtonText === 'Done',
+            active: this.listenSessionStatus === 'inSession',
+            done: this.listenSessionStatus === 'afterSession',
         };
-        const showStopIcon = listenButtonText === 'Stop' || listenButtonText === 'Done';
+        const showStopIcon = this.listenSessionStatus === 'inSession' || this.listenSessionStatus === 'afterSession';
 
         return html`
             <div class="header" @mousedown=${this.handleMouseDown}>
@@ -644,7 +648,7 @@ export class MainHeader extends LitElement {
 
                 <div class="header-actions ask-action" @click=${() => this._handleAskClick()}>
                     <div class="action-text">
-                        <div class="action-text-content">Ask</div>
+                        <div class="action-text-content">${t('ask')}</div>
                     </div>
                     <div class="icon-container">
                         ${this.renderShortcut(this.shortcuts.nextStep)}
@@ -653,7 +657,7 @@ export class MainHeader extends LitElement {
 
                 <div class="header-actions" @click=${() => this._handleToggleAllWindowsVisibility()}>
                     <div class="action-text">
-                        <div class="action-text-content">Show/Hide</div>
+                        <div class="action-text-content">${t('showHide')}</div>
                     </div>
                     <div class="icon-container">
                         ${this.renderShortcut(this.shortcuts.toggleVisibility)}
