@@ -173,11 +173,22 @@ app.whenReady().then(async () => {
 
     // Setup native loopback audio capture for Windows
     session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+        console.log('[DisplayMedia] setDisplayMediaRequestHandler called with request:', request);
+        
         desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
-            // Grant access to the first screen found with loopback audio
-            callback({ video: sources[0], audio: 'loopback' });
+            console.log('[DisplayMedia] Available sources:', sources.map(s => ({ id: s.id, name: s.name })));
+            
+            if (sources.length > 0) {
+                // Grant access to the first screen found with loopback audio
+                const result = { video: sources[0], audio: 'loopback' };
+                console.log('[DisplayMedia] Granting access with result:', result);
+                callback(result);
+            } else {
+                console.warn('[DisplayMedia] No sources available');
+                callback({});
+            }
         }).catch((error) => {
-            console.error('Failed to get desktop capturer sources:', error);
+            console.error('[DisplayMedia] Failed to get desktop capturer sources:', error);
             callback({});
         });
     });
@@ -258,8 +269,12 @@ app.on('before-quit', async (event) => {
     
     try {
         // 1. Stop audio capture first (immediate)
-        await listenService.closeSession();
-        console.log('[Shutdown] Audio capture stopped');
+        try {
+            await listenService.closeSession();
+            console.log('[Shutdown] Audio capture stopped');
+        } catch (audioError) {
+            console.warn('[Shutdown] Error stopping audio capture:', audioError.message);
+        }
         
         // 2. End all active sessions (database operations) - with error handling
         try {
@@ -270,22 +285,26 @@ app.on('before-quit', async (event) => {
         }
         
         // 3. Shutdown Ollama service (potentially time-consuming)
-        console.log('[Shutdown] shutting down Ollama service...');
-        const ollamaShutdownSuccess = await Promise.race([
-            ollamaService.shutdown(false), // Graceful shutdown
-            new Promise(resolve => setTimeout(() => resolve(false), 8000)) // 8s timeout
-        ]);
-        
-        if (ollamaShutdownSuccess) {
-            console.log('[Shutdown] Ollama service shut down gracefully');
-        } else {
-            console.log('[Shutdown] Ollama shutdown timeout, forcing...');
-            // Force shutdown if graceful failed
-            try {
-                await ollamaService.shutdown(true);
-            } catch (forceShutdownError) {
-                console.warn('[Shutdown] Force shutdown also failed:', forceShutdownError.message);
+        try {
+            console.log('[Shutdown] shutting down Ollama service...');
+            const ollamaShutdownSuccess = await Promise.race([
+                ollamaService.shutdown(false), // Graceful shutdown
+                new Promise(resolve => setTimeout(() => resolve(false), 8000)) // 8s timeout
+            ]);
+            
+            if (ollamaShutdownSuccess) {
+                console.log('[Shutdown] Ollama service shut down gracefully');
+            } else {
+                console.log('[Shutdown] Ollama shutdown timeout, forcing...');
+                // Force shutdown if graceful failed
+                try {
+                    await ollamaService.shutdown(true);
+                } catch (forceShutdownError) {
+                    console.warn('[Shutdown] Force shutdown also failed:', forceShutdownError.message);
+                }
             }
+        } catch (ollamaError) {
+            console.warn('[Shutdown] Error shutting down Ollama service:', ollamaError.message);
         }
         
         // 4. Close database connections (final cleanup)
@@ -304,7 +323,8 @@ app.on('before-quit', async (event) => {
     } finally {
         // Actually quit the app now
         console.log('[Shutdown] Exiting application...');
-        app.exit(0); // Use app.exit() instead of app.quit() to force quit
+        // Use app.quit() instead of app.exit() to allow normal quit flow
+        app.quit();
     }
 });
 

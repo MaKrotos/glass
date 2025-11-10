@@ -572,8 +572,12 @@ class SttService {
     }
 
     async sendSystemAudioContent(data, mimeType) {
+        console.log(`[SttService] sendSystemAudioContent called with data length: ${data?.length}, mimeType: ${mimeType}`);
+        
         if (!this.theirSttSession) {
-            throw new Error('Their STT session not active');
+            const error = new Error('Their STT session not active');
+            console.error('[SttService] sendSystemAudioContent error:', error.message);
+            throw error;
         }
 
         let modelInfo = this.modelInfo;
@@ -582,8 +586,12 @@ class SttService {
             modelInfo = await modelStateService.getCurrentModelInfo('stt');
         }
         if (!modelInfo) {
-            throw new Error('STT model info could not be retrieved.');
+            const error = new Error('STT model info could not be retrieved.');
+            console.error('[SttService] sendSystemAudioContent error:', error.message);
+            throw error;
         }
+
+        console.log(`[SttService] Using model: ${modelInfo.provider}, modelId: ${modelInfo.model}`);
 
         let payload;
         if (modelInfo.provider === 'gemini') {
@@ -594,10 +602,21 @@ class SttService {
             payload = data;
         }
 
-        await this.theirSttSession.sendRealtimeInput(payload);
+        try {
+            await this.theirSttSession.sendRealtimeInput(payload);
+            console.log('[SttService] System audio data sent to STT session successfully');
+        } catch (error) {
+            console.error('[SttService] Error sending system audio to STT session:', error.message);
+            throw error;
+        }
     }
 
     killExistingSystemAudioDump() {
+        // Only run on macOS since SystemAudioDump is a macOS-specific binary
+        if (process.platform !== 'darwin') {
+            return Promise.resolve();
+        }
+
         return new Promise(resolve => {
             console.log('Checking for existing SystemAudioDump processes...');
 

@@ -376,16 +376,68 @@ function setupLinuxMicProcessing(micStream) {
 }
 
 function setupSystemAudioProcessing(systemStream) {
+    console.log('[listenCapture] setupSystemAudioProcessing called with stream:', systemStream);
+    
+    // Check if stream has audio tracks
+    const audioTracks = systemStream.getAudioTracks();
+    console.log('[listenCapture] Audio tracks in system stream:', audioTracks.length);
+    audioTracks.forEach((track, index) => {
+        console.log(`[listenCapture] Audio track ${index}:`, {
+            id: track.id,
+            kind: track.kind,
+            label: track.label,
+            enabled: track.enabled,
+            readyState: track.readyState
+        });
+    });
+
     const systemAudioContext = new AudioContext({ sampleRate: SAMPLE_RATE });
+    console.log('[listenCapture] Created AudioContext with sampleRate:', SAMPLE_RATE);
+    
     const systemSource = systemAudioContext.createMediaStreamSource(systemStream);
+    console.log('[listenCapture] Created MediaStreamSource from system stream');
+    
     const systemProcessor = systemAudioContext.createScriptProcessor(BUFFER_SIZE, 1, 1);
+    console.log('[listenCapture] Created ScriptProcessor with buffer size:', BUFFER_SIZE);
 
     let audioBuffer = [];
     const samplesPerChunk = SAMPLE_RATE * AUDIO_CHUNK_DURATION;
+    console.log('[listenCapture] samplesPerChunk:', samplesPerChunk);
+
+    let processedChunks = 0;
+    let lastLogTime = Date.now();
 
     systemProcessor.onaudioprocess = async e => {
         const inputData = e.inputBuffer.getChannelData(0);
-        if (!inputData || inputData.length === 0) return;
+        
+        // Log periodically to avoid spam
+        if (Date.now() - lastLogTime > 5000) { // Log every 5 seconds
+            console.log(`[listenCapture] onaudioprocess called. Input data length: ${inputData?.length}`);
+            console.log(`[listenCapture] Audio buffer size: ${audioBuffer.length}`);
+            lastLogTime = Date.now();
+        }
+        
+        if (!inputData || inputData.length === 0) {
+            // Log this condition occasionally
+            if (Date.now() - lastLogTime > 10000) {
+                console.log('[listenCapture] No input data or empty input data');
+                lastLogTime = Date.now();
+            }
+            return;
+        }
+        
+        // Check for silence
+        let sum = 0;
+        for (let i = 0; i < inputData.length; i++) {
+            sum += inputData[i] * inputData[i];
+        }
+        const rms = Math.sqrt(sum / inputData.length);
+        
+        // Log if we're getting audio data (not silence)
+        if (rms > 0.001 && Date.now() - lastLogTime > 5000) {
+            console.log(`[listenCapture] Receiving audio data. RMS: ${rms.toFixed(6)}`);
+            lastLogTime = Date.now();
+        }
         
         audioBuffer.push(...inputData);
 
@@ -393,6 +445,13 @@ function setupSystemAudioProcessing(systemStream) {
             const chunk = audioBuffer.splice(0, samplesPerChunk);
             const pcmData16 = convertFloat32ToInt16(chunk);
             const base64Data = arrayBufferToBase64(pcmData16.buffer);
+            
+            processedChunks++;
+            
+            // Log every 100 chunks to avoid spam
+            if (processedChunks % 100 === 0) {
+                console.log(`[listenCapture] Sending system audio chunk ${processedChunks}, data length: ${base64Data.length}`);
+            }
 
             try {
                 await window.api.listenCapture.sendSystemAudioContent({
@@ -400,13 +459,15 @@ function setupSystemAudioProcessing(systemStream) {
                     mimeType: 'audio/pcm;rate=24000',
                 });
             } catch (error) {
-                console.error('Failed to send system audio:', error);
+                console.error('[listenCapture] Failed to send system audio:', error);
             }
         }
     };
 
     systemSource.connect(systemProcessor);
     systemProcessor.connect(systemAudioContext.destination);
+    
+    console.log('[listenCapture] System audio processing setup complete');
 
     return { context: systemAudioContext, processor: systemProcessor };
 }
