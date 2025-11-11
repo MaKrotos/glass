@@ -258,7 +258,7 @@ class AskService {
             // Получаем язык из настроек
             const language = await settingsService.getLanguage();
 
-            const systemPrompt = getSystemPrompt('pickle_glass_analysis', conversationHistory, false, language);
+            const systemPrompt = await getSystemPrompt('pickle_glass_analysis', conversationHistory, false, language);
 
             const messages = [
                 { role: 'system', content: systemPrompt },
@@ -313,7 +313,7 @@ class AskService {
                     // 텍스트만으로 메시지 재구성
                     // Получаем язык из настроек для фолбэка
                     const fallbackLanguage = await settingsService.getLanguage();
-                    const fallbackSystemPrompt = getSystemPrompt('pickle_glass_analysis', conversationHistory, false, fallbackLanguage);
+                    const fallbackSystemPrompt = await getSystemPrompt('pickle_glass_analysis', conversationHistory, false, fallbackLanguage);
                     
                     const textOnlyMessages = [
                         { role: 'system', content: fallbackSystemPrompt },

@@ -362,11 +362,9 @@ Provide only the exact words to say in **markdown format**. Focus on finding win
     </objective>`,
       searchUsage: ``,
       content: `User-provided context (defer to this information over your general knowledge / if there is specific script/desired responses prioritize this over previous instructions)
-    
-    Make sure to **reference context** fully if it is provided (ex. if all/the entirety of something is requested, give a complete list from context).
-    ----------
-    
-    Please respond in English language. Take into account the user's preferred language for the response.`,
+      
+      Make sure to **reference context** fully if it is provided (ex. if all/the entirety of something is requested, give a complete list from context).
+      ----------`,
       outputInstructions: `{{CONVERSATION_HISTORY}}`
     }
   },
@@ -733,11 +731,9 @@ Provide only the exact words to say in **markdown format**. Focus on finding win
     </цель>`,
       searchUsage: ``,
       content: `Контекст, предоставленный пользователем (отдавайте приоритет этой информации перед вашими общими знаниями / если есть конкретный сценарий/желаемые ответы, приоритет отдается им перед предыдущими инструкциями)
-    
-    Убедитесь, что **полностью ссылаетесь на контекст**, если он предоставлен (например, если запрошена вся/полная информация, дайте полный список из контекста).
-    ----------
-    
-    Пожалуйста, отвечайте на русском языке. Учитывайте предпочтительный язык пользователя при ответе.`,
+      
+      Убедитесь, что **полностью ссылаетесь на контекст**, если он предоставлен (например, если запрошена вся/полная информация, дайте полный список из контекста).
+      ----------`,
       outputInstructions: `{{CONVERSATION_HISTORY}}`
     }
   }

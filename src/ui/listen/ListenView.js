@@ -770,7 +770,7 @@ export class ListenView extends LitElement {
                         <!-- Выбор языка -->
                         <select class="language-select" @change=${this.handleLanguageChange} .value=${this.currentLanguage}>
                             ${this.availableLanguages.map(lang => html`
-                                <option value="${lang.code}">${lang.name}</option>
+                                <option value="${lang.code}">${lang.code}</option>
                             `)}
                         </select>
                         

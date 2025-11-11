@@ -94,7 +94,7 @@ Please build upon this context while analyzing the new conversation segments.
         // Получаем язык из настроек
         const language = await settingsService.getLanguage();
 
-        const basePrompt = getSystemPrompt('pickle_glass_analysis', '', false, language);
+        const basePrompt = await getSystemPrompt('pickle_glass_analysis', '', false, language);
         const systemPrompt = basePrompt.replace('{{CONVERSATION_HISTORY}}', recentConversation);
 
         try {
@@ -304,10 +304,10 @@ Keep all points concise and build upon previous analysis if provided.`,
     }
 
     /**
-     * Triggers analysis when conversation history reaches 5 texts.
+     * Triggers analysis when conversation history reaches 3 texts.
      */
     async triggerAnalysisIfNeeded() {
-        if (this.conversationHistory.length >= 5 && this.conversationHistory.length % 5 === 0) {
+        if (this.conversationHistory.length >= 3 && this.conversationHistory.length % 3 === 0) {
             console.log(`Triggering analysis - ${this.conversationHistory.length} conversation texts accumulated`);
 
             const data = await this.makeOutlineAndRequests(this.conversationHistory);

@@ -394,7 +394,7 @@ export class SettingsView extends LitElement {
             color: white;
             font-weight: 600;
         }
-        .provider-key-group input {
+        .provider-key-group input, .provider-key-group select {
             width: 100%; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.2);
             color: white; border-radius: 4px; padding: 5px 8px; font-size: 11px; box-sizing: border-box;
         }
