@@ -6,6 +6,7 @@ const sessionRepository = require('../common/repositories/session');
 const sttRepository = require('./stt/repositories');
 const internalBridge = require('../../bridge/internalBridge');
 const settingsService = require('../settings/settingsService');
+const askService = require('../ask/askService');
 
 class ListenService {
     constructor() {
@@ -278,6 +279,35 @@ class ListenService {
 
     getConversationHistory() {
         return this.summaryService.getConversationHistory();
+    }
+
+    /**
+     * Отправляет вопрос в сервис вопросов (askService)
+     * @param {string} question - Текст вопроса для отправки
+     * @returns {Promise<{success: boolean, error?: string}>}
+     */
+    async sendQuestionToAskService(question) {
+        try {
+            console.log(`[ListenService] Sending question to AskService: ${question}`);
+            // Получаем историю разговора для контекста
+            const conversationHistory = this.summaryService.getConversationHistory();
+            // Преобразуем историю в массив строк
+            const conversationTexts = conversationHistory.map(turn => `${turn.speaker}: ${turn.text}`);
+            
+            // Отправляем вопрос в askService с историей разговора
+            const result = await askService.sendMessage(question, conversationTexts);
+            
+            if (result.success) {
+                console.log('[ListenService] Question sent to AskService successfully');
+                return { success: true };
+            } else {
+                console.error('[ListenService] Failed to send question to AskService:', result.error);
+                return { success: false, error: result.error };
+            }
+        } catch (error) {
+            console.error('[ListenService] Error sending question to AskService:', error);
+            return { success: false, error: error.message };
+        }
     }
 
     _createHandler(asyncFn, successMessage, errorMessage) {

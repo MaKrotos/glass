@@ -50,6 +50,38 @@ export class SttView extends LitElement {
             font-size: 13px;
             margin-bottom: 4px;
             box-sizing: border-box;
+            position: relative;
+        }
+        
+        .stt-message .ask-button {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 4px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        .stt-message:hover .ask-button {
+            opacity: 1;
+        }
+        
+        .stt-message .ask-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .stt-message .ask-button svg {
+            width: 12px;
+            height: 12px;
+            fill: white;
         }
 
         .stt-message.them {
@@ -192,6 +224,21 @@ export class SttView extends LitElement {
     getTranscriptText() {
         return this.sttMessages.map(msg => `${msg.speaker}: ${msg.text}`).join('\n');
     }
+    
+    async sendQuestionToAskService(question) {
+        if (!window.api) return;
+        
+        try {
+            const result = await window.api.sttView.sendQuestionToAskService(question);
+            console.log('[SttView] Question sent to AskService:', result);
+        } catch (error) {
+            console.error('[SttView] Error sending question to AskService:', error);
+        }
+    }
+    
+    handleAskButtonClick(question) {
+        this.sendQuestionToAskService(question);
+    }
 
     updated(changedProperties) {
         super.updated(changedProperties);
@@ -216,6 +263,11 @@ export class SttView extends LitElement {
                     : this.sttMessages.map(msg => html`
                         <div class="stt-message ${this.getSpeakerClass(msg.speaker)}">
                             ${msg.text}
+                            <button class="ask-button" @click=${() => this.handleAskButtonClick(msg.text)}>
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1L13.5 2.5L16.1 5.1L15.1 6.1L12.5 3.5L11 5L17 11H15C15 12.1 15.4 13.2 16.1 14L13.5 16.6C12.4 15.8 11.2 15.4 10 15.4C7.8 15.4 6 17.2 6 19.4C6 21.6 7.8 23.4 10 23.4C12.2 23.4 14 21.6 14 19.4C14 18.2 13.6 17 12.8 15.9L15.4 13.3C16.2 14 17.3 14.4 18.5 14.4V12.5L21 9Z"/>
+                                </svg>
+                            </button>
                         </div>
                     `)
                 }
@@ -224,4 +276,4 @@ export class SttView extends LitElement {
     }
 }
 
-customElements.define('stt-view', SttView); 
+customElements.define('stt-view', SttView);

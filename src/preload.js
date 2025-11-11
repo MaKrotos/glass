@@ -191,6 +191,9 @@ contextBridge.exposeInMainWorld('api', {
 
   // src/ui/listen/stt/SttView.js
   sttView: {
+    // Message Handling
+    sendQuestionToAskService: (text) => ipcRenderer.invoke('listen:sendQuestionToAskService', text),
+    
     // Listeners
     onSttUpdate: (callback) => ipcRenderer.on('stt-update', callback),
     removeOnSttUpdate: (callback) => ipcRenderer.removeListener('stt-update', callback)

@@ -113,6 +113,16 @@ module.exports = {
         return { success: false, error: error.message };
       }
     });
+    ipcMain.handle('listen:sendQuestionToAskService', async (event, question) => {
+      console.log('[FeatureBridge] listen:sendQuestionToAskService', question);
+      try {
+        const result = await listenService.sendQuestionToAskService(question);
+        return result;
+      } catch (error) {
+        console.error('[FeatureBridge] listen:sendQuestionToAskService failed', error.message);
+        return { success: false, error: error.message };
+      }
+    });
 
     // ModelStateService
     ipcMain.handle('model:validate-key', async (e, { provider, key }) => await modelStateService.handleValidateKey(provider, key));
