@@ -44,12 +44,17 @@ class SttService {
         this.onTranscriptionComplete = null;
         this.onStatusUpdate = null;
 
-        this.modelInfo = null; 
+        // Connection state
+        this.currentConnectionState = 'connecting'; // Default state
+        this.currentConnectionError = null;
+
+        this.modelInfo = null;
     }
 
-    setCallbacks({ onTranscriptionComplete, onStatusUpdate }) {
+    setCallbacks({ onTranscriptionComplete, onStatusUpdate, onConnectionStateChange }) {
         this.onTranscriptionComplete = onTranscriptionComplete;
         this.onStatusUpdate = onStatusUpdate;
+        this.onConnectionStateChange = onConnectionStateChange;
     }
 
     sendToRenderer(channel, data) {
@@ -59,6 +64,14 @@ class SttService {
         
         if (listenWindow && !listenWindow.isDestroyed()) {
             listenWindow.webContents.send(channel, data);
+        }
+    }
+
+    sendConnectionStateChange(state, error = null) {
+        this.currentConnectionState = state;
+        this.currentConnectionError = error;
+        if (this.onConnectionStateChange) {
+            this.onConnectionStateChange(state, error);
         }
     }
 
@@ -158,6 +171,9 @@ class SttService {
         }
         this.modelInfo = modelInfo;
         console.log(`[SttService] Initializing STT for ${modelInfo.provider} using model ${modelInfo.model}`);
+        
+        // Отправляем событие о начале подключения
+        this.sendConnectionStateChange('connecting');
 
         const handleMyMessage = message => {
             if (!this.modelInfo) {
@@ -471,6 +487,9 @@ class SttService {
         ]);
 
         console.log('✅ Both STT sessions initialized successfully.');
+        
+        // Отправляем событие об успешном подключении
+        this.sendConnectionStateChange('connected');
 
         // ── Setup keep-alive heart-beats ────────────────────────────────────────
         if (this.keepAliveInterval) clearInterval(this.keepAliveInterval);
@@ -506,6 +525,8 @@ class SttService {
                 this.theirSttSession?.keepAlive?.();
             } catch (err) {
                 console.error('[SttService] keepAlive error:', err.message);
+                // Отправляем событие об ошибке подключения
+                this.sendConnectionStateChange('error', err.message);
             }
         }
     }
@@ -803,8 +824,21 @@ class SttService {
         this.theirCurrentUtterance = '';
         this.myCompletionBuffer = '';
         this.theirCompletionBuffer = '';
-        this.modelInfo = null; 
+        this.currentConnectionState = 'connecting';
+        this.currentConnectionError = null;
+        this.modelInfo = null;
+    }
+
+    /**
+     * Get the current connection state and error
+     * @returns {{state: string, error: string|null}}
+     */
+    getCurrentConnectionState() {
+        return {
+            state: this.currentConnectionState,
+            error: this.currentConnectionError
+        };
     }
 }
 
-module.exports = SttService; 
+module.exports = SttService;

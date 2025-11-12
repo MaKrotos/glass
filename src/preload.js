@@ -196,7 +196,14 @@ contextBridge.exposeInMainWorld('api', {
     
     // Listeners
     onSttUpdate: (callback) => ipcRenderer.on('stt-update', callback),
-    removeOnSttUpdate: (callback) => ipcRenderer.removeListener('stt-update', callback)
+    removeOnSttUpdate: (callback) => ipcRenderer.removeListener('stt-update', callback),
+    
+    // STT Connection State Listeners
+    onSttConnectionStateChange: (callback) => ipcRenderer.on('stt-connection-state-change', (event, data) => callback(event, data)),
+    removeOnSttConnectionStateChange: (callback) => ipcRenderer.removeListener('stt-connection-state-change', callback),
+
+    // Get current connection state
+    getCurrentSttConnectionState: () => ipcRenderer.invoke('listen:get-stt-connection-state')
   },
 
   // src/ui/listen/summary/SummaryView.js

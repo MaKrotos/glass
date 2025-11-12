@@ -486,6 +486,14 @@ function createFeatureWindows(header, namesToCreate) {
                     listen.webContents.openDevTools({ mode: 'detach' });
                 }
                 windowPool.set('listen', listen);
+                
+                // Установка обработчика событий о состоянии подключения STT после загрузки контента
+                listen.webContents.once('did-finish-load', () => {
+                    const featureBridge = require('../bridge/featureBridge');
+                    if (featureBridge.setupSttConnectionStateHandler) {
+                        featureBridge.setupSttConnectionStateHandler();
+                    }
+                });
                 break;
             }
 

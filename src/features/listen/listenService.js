@@ -27,6 +27,12 @@ class ListenService {
             },
             onStatusUpdate: (status) => {
                 this.sendToRenderer('update-status', status);
+            },
+            onConnectionStateChange: (state, error) => {
+                // Forward connection state changes to featureBridge
+                if (this.sttService.onConnectionStateChange) {
+                    this.sttService.onConnectionStateChange(state, error);
+                }
             }
         });
 
@@ -182,6 +188,8 @@ class ListenService {
             // Initialize database session
             const sessionInitialized = await this.initializeNewSession();
             if (!sessionInitialized) {
+                // Notify STT connection error
+                this.sttService.sendConnectionStateChange('error', 'Failed to initialize database session');
                 throw new Error('Failed to initialize database session');
             }
 
@@ -214,6 +222,8 @@ class ListenService {
             return true;
         } catch (error) {
             console.error('❌ Failed to initialize listen service:', error);
+            // Notify STT connection error
+            this.sttService.sendConnectionStateChange('error', error.message);
             this.sendToRenderer('update-status', 'Initialization failed.');
             return false;
         } finally {

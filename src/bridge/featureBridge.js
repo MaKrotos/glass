@@ -124,6 +124,33 @@ module.exports = {
       }
     });
 
+    ipcMain.handle('listen:get-stt-connection-state', async () => {
+      console.log('[FeatureBridge] listen:get-stt-connection-state');
+      try {
+        const state = listenService.sttService.getCurrentConnectionState();
+        console.log('[FeatureBridge] Current STT connection state:', state);
+        return state;
+      } catch (error) {
+        console.error('[FeatureBridge] listen:get-stt-connection-state failed', error.message);
+        return { state: 'error', error: error.message };
+      }
+    });
+    
+    // STT Connection State Events
+    // Обработчик будет установлен позже в windowManager.js после создания окна 'listen'
+    this.setupSttConnectionStateHandler = () => {
+      listenService.sttService.onConnectionStateChange = (state, error) => {
+        console.log(`[FeatureBridge] STT connection state changed: ${state}`, error);
+        const listenWindow = require('../window/windowManager').windowPool?.get('listen');
+        if (listenWindow && !listenWindow.isDestroyed()) {
+          console.log(`[FeatureBridge] Sending stt-connection-state-change to renderer: ${state}`, error);
+          listenWindow.webContents.send('stt-connection-state-change', { state, error });
+        } else {
+          console.log('[FeatureBridge] Could not send stt-connection-state-change, listen window not found or destroyed');
+        }
+      };
+    };
+
     // ModelStateService
     ipcMain.handle('model:validate-key', async (e, { provider, key }) => await modelStateService.handleValidateKey(provider, key));
     ipcMain.handle('model:get-all-keys', async () => await modelStateService.getAllApiKeys());
