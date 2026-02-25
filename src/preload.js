@@ -118,11 +118,14 @@ contextBridge.exposeInMainWorld('api', {
     sendListenButtonClick: (sessionStatus) => ipcRenderer.invoke('listen:changeSession', sessionStatus),
     sendAskButtonClick: () => ipcRenderer.invoke('ask:toggleAskButton'),
     sendToggleAllWindowsVisibility: () => ipcRenderer.invoke('shortcut:toggleAllWindowsVisibility'),
+    sendToggleMouseDisable: () => ipcRenderer.invoke('shortcut:toggleMouseDisable'),
     
     // Listeners
     onListenChangeSessionResult: (callback) => ipcRenderer.on('listen:changeSessionResult', callback),
     removeOnListenChangeSessionResult: (callback) => ipcRenderer.removeListener('listen:changeSessionResult', callback),
     onShortcutsUpdated: (callback) => ipcRenderer.on('shortcuts-updated', callback),
+    onMouseDisableToggled: (callback) => ipcRenderer.on('mouse-disable-toggled', callback),
+    removeOnMouseDisableToggled: (callback) => ipcRenderer.removeListener('mouse-disable-toggled', callback),
     removeOnShortcutsUpdated: (callback) => ipcRenderer.removeListener('shortcuts-updated', callback)
   },
 

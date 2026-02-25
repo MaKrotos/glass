@@ -423,6 +423,15 @@ const toggleContentProtection = () => {
     return newStatus;
 };
 
+const toggleMouseDisable = () => {
+    // This function should trigger the mouse disable functionality
+    // Since the actual logic is in shortcutsService, we'll emit an event
+    // that shortcutsService can listen to
+    internalBridge.emit('shortcut:toggleMouseDisable');
+    console.log('[WindowManager] toggleMouseDisable called');
+    return true;
+};
+
 
 const openLoginPage = () => {
     const webUrl = process.env.pickleglass_WEB_URL || 'http://localhost:3000';
@@ -814,4 +823,5 @@ module.exports = {
     getHeaderPosition,
     moveHeaderTo,
     adjustWindowHeight,
+    toggleMouseDisable,
 };

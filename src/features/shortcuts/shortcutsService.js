@@ -19,6 +19,25 @@ class ShortcutsService {
             console.log('[ShortcutsService] Reregistering shortcuts due to header state change.');
             this.registerShortcuts();
         });
+        // Add listener for mouse disable toggle
+        internalBridge.on('shortcut:toggleMouseDisable', () => {
+            console.log('[ShortcutsService] toggleMouseDisable called via internalBridge');
+            // Simulate the mouse disable toggle by calling the existing logic
+            this.mouseDisabled = !this.mouseDisabled;
+            
+            const mainWindow = this.windowPool.get('header');
+            if(mainWindow && !mainWindow.isDestroyed()){
+                mainWindow.setIgnoreMouseEvents(this.mouseDisabled, { forward: true });
+                mainWindow.webContents.send('mouse-disable-toggled', this.mouseDisabled);
+            }
+            
+            // Apply to all windows in the pool
+            this.windowPool.forEach((win, name) => {
+                if (win && !win.isDestroyed() && name !== 'header') {
+                    win.setIgnoreMouseEvents(this.mouseDisabled, { forward: true });
+                }
+            });
+        });
         console.log('[ShortcutsService] Initialized with dependencies and event listener.');
     }
 
