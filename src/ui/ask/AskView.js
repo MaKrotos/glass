@@ -779,9 +779,13 @@ export class AskView extends LitElement {
                 console.log('Show text input signal received');
                 if (!this.showTextInput) {
                     this.showTextInput = true;
-                    this.updateComplete.then(() => this.focusTextInput());
+                    this.updateComplete.then(() => {
+                        // Add a small delay to ensure window animation is complete
+                        setTimeout(() => this.focusTextInput(), 100);
+                    });
                   } else {
-                    this.focusTextInput();
+                    // Add a small delay to ensure window animation is complete
+                    setTimeout(() => this.focusTextInput(), 100);
                   }
             });
 
@@ -797,12 +801,16 @@ export class AskView extends LitElement {
                 this.showTextInput = newState.showTextInput;
               
                 if (newState.showTextInput) {
-                  if (wasHidden) {
-                    this.updateComplete.then(() => this.focusTextInput());
-                  } else {
-                    this.focusTextInput();
-                  }
+                if (wasHidden) {
+                  this.updateComplete.then(() => {
+                    // Add a small delay to ensure window animation is complete
+                    setTimeout(() => this.focusTextInput(), 100);
+                  });
+                } else {
+                  // Add a small delay to ensure window animation is complete
+                  setTimeout(() => this.focusTextInput(), 100);
                 }
+              }
               });
             console.log('AskView: IPC 이벤트 리스너 등록 완료');
         }
@@ -1312,7 +1320,8 @@ export class AskView extends LitElement {
         }
     
         if (changedProperties.has('showTextInput') && this.showTextInput) {
-            this.focusTextInput();
+            // Add a small delay to ensure window animation is complete
+            setTimeout(() => this.focusTextInput(), 100);
         }
     }
 

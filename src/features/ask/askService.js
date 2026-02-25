@@ -168,6 +168,12 @@ class AskService {
                 console.log('[AskService] Showing hidden Ask window');
                 internalBridge.emit('window:requestVisibility', { name: 'ask', visible: true });
                 this.state.isVisible = true;
+                
+                // Request focus on text input when showing the window
+                const askWindow = getWindowPool()?.get('ask');
+                if (askWindow && !askWindow.isDestroyed()) {
+                    askWindow.webContents.send('ask:showTextInput');
+                }
             }
             if (this.state.isVisible) {
                 this.state.showTextInput = true;
