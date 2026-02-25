@@ -6,12 +6,17 @@ export class MainHeader extends LitElement {
         isTogglingSession: { type: Boolean, state: true },
         shortcuts: { type: Object, state: true },
         listenSessionStatus: { type: String, state: true },
+        mouseDisabled: { type: Boolean, state: true },
     };
 
     static styles = css`
         :host {
             display: flex;
             transition: transform 0.2s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.2s ease-out;
+        }
+        
+        :host(.mouse-disabled) .header-actions.mouse-disable-action {
+            background: rgba(255, 0, 0, 0.3);
         }
 
         :host(.hiding) {
@@ -350,12 +355,37 @@ export class MainHeader extends LitElement {
         this.settingsHideTimer = null;
         this.isTogglingSession = false;
         this.listenSessionStatus = 'beforeSession';
+        this.mouseDisabled = false;
         this.animationEndTimer = null;
         this.handleAnimationEnd = this.handleAnimationEnd.bind(this);
         this.handleMouseMove = this.handleMouseMove.bind(this);
         this.handleMouseUp = this.handleMouseUp.bind(this);
+        this.handleWheel = this.handleWheel.bind(this);
         this.dragState = null;
         this.wasJustDragged = false;
+        
+        // Добавить throttle для moveHeaderTo
+        this.throttledMoveHeader = this.throttle(this.moveHeader, 16); // ~60fps
+    }
+
+    // Добавить метод throttle
+    throttle(func, limit) {
+        let inThrottle;
+        return function(...args) {
+            if (!inThrottle) {
+                func.apply(this, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        }
+    }
+
+    // Отдельный метод для перемещения
+    moveHeader(newWindowX, newWindowY) {
+        if (window.api) {
+            // Передаем ТОЛЬКО позицию, без изменения размера
+            window.api.mainHeader.moveHeaderTo(newWindowX, newWindowY);
+        }
     }
 _getListenButtonText(status) {
     switch (status) {
@@ -397,13 +427,28 @@ _getListenButtonText(status) {
         const newWindowX = this.dragState.initialWindowX + (e.screenX - this.dragState.initialMouseX);
         const newWindowY = this.dragState.initialWindowY + (e.screenY - this.dragState.initialMouseY);
 
-        window.api.mainHeader.moveHeaderTo(newWindowX, newWindowY);
+        // ✅ Используем throttle версию
+        this.throttledMoveHeader(newWindowX, newWindowY);
+        
+        // ✅ Добавляем флаг, что идет перетаскивание
+        if (!this.dragState.isDragging) {
+            this.dragState.isDragging = true;
+            // Оповещаем main процесс о начале перетаскивания
+            if (window.api && window.api.mainHeader.setDragging) {
+                window.api.mainHeader.setDragging(true);
+            }
+        }
     }
 
     handleMouseUp(e) {
         if (!this.dragState) return;
 
         const wasDragged = this.dragState.moved;
+        
+        // ✅ Оповещаем об окончании перетаскивания
+        if (this.dragState.isDragging && window.api && window.api.mainHeader.setDragging) {
+            window.api.mainHeader.setDragging(false);
+        }
 
         window.removeEventListener('mousemove', this.handleMouseMove, { capture: true });
         this.dragState = null;
@@ -412,7 +457,15 @@ _getListenButtonText(status) {
             this.wasJustDragged = true;
             setTimeout(() => {
                 this.wasJustDragged = false;
-            }, 0);
+            }, 100); // Увеличил до 100ms для надежности
+        }
+    }
+
+    // ✅ Добавить обработку колесика мыши (иногда вызывает resize)
+    handleWheel(e) {
+        if (this.dragState) {
+            e.preventDefault();
+            e.stopPropagation();
         }
     }
 
@@ -471,6 +524,7 @@ _getListenButtonText(status) {
     connectedCallback() {
         super.connectedCallback();
         this.addEventListener('animationend', this.handleAnimationEnd);
+        this.addEventListener('wheel', this.handleWheel, { passive: false });
 
         if (window.api) {
 
@@ -495,12 +549,20 @@ _getListenButtonText(status) {
                 this.shortcuts = keybinds;
             };
             window.api.mainHeader.onShortcutsUpdated(this._shortcutListener);
+            
+            // Add listener for mouse disable toggled event
+            this._mouseDisableListener = (event, isDisabled) => {
+                this.mouseDisabled = isDisabled;
+                this.requestUpdate();
+            };
+            window.api.mainHeader.onMouseDisableToggled(this._mouseDisableListener);
         }
     }
 
     disconnectedCallback() {
         super.disconnectedCallback();
         this.removeEventListener('animationend', this.handleAnimationEnd);
+        this.removeEventListener('wheel', this.handleWheel);
         
         if (this.animationEndTimer) {
             clearTimeout(this.animationEndTimer);
@@ -513,6 +575,9 @@ _getListenButtonText(status) {
             }
             if (this._shortcutListener) {
                 window.api.mainHeader.removeOnShortcutsUpdated(this._shortcutListener);
+            }
+            if (this._mouseDisableListener) {
+                window.api.mainHeader.removeOnMouseDisableToggled(this._mouseDisableListener);
             }
         }
     }
@@ -576,6 +641,18 @@ _getListenButtonText(status) {
             console.error('IPC invoke for all windows visibility button failed:', error);
         }
     }
+    async _handleToggleMouseDisable() {
+        if (this.wasJustDragged) return;
+
+        try {
+            // We'll implement this in the preload.js
+            if (window.api && window.api.mainHeader.sendToggleMouseDisable) {
+                await window.api.mainHeader.sendToggleMouseDisable();
+            }
+        } catch (error) {
+            console.error('IPC invoke for mouse disable button failed:', error);
+        }
+    }
 
 
     renderShortcut(accelerator) {
@@ -602,6 +679,13 @@ _getListenButtonText(status) {
     }
 
     render() {
+        // Add mouse-disabled class to host element when mouse is disabled
+        if (this.mouseDisabled) {
+            this.classList.add('mouse-disabled');
+        } else {
+            this.classList.remove('mouse-disabled');
+        }
+        
         const listenButtonText = this._getListenButtonText(this.listenSessionStatus);
     
         // Используем статус сессии вместо локализованного текста для определения классов кнопки
@@ -613,7 +697,7 @@ _getListenButtonText(status) {
 
         return html`
             <div class="header" @mousedown=${this.handleMouseDown}>
-                <button 
+                <button
                     class="listen-button ${Object.keys(buttonClasses).filter(k => buttonClasses[k]).join(' ')}"
                     @click=${this._handleListenClick}
                     ?disabled=${this.isTogglingSession}
@@ -664,7 +748,18 @@ _getListenButtonText(status) {
                     </div>
                 </div>
 
-                <button 
+                <div class="header-actions mouse-disable-action" @click=${() => this._handleToggleMouseDisable()}>
+                    <div class="action-text">
+                        <div class="action-text-content">${t('mouse')}</div>
+                    </div>
+                    <div class="icon-container">
+                        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M11 1L1 11" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+                            <path d="M3.5 1C2.11929 1 1 2.11929 1 3.5V8.5C1 9.88071 2.11929 11 3.5 11H8.5C9.88071 11 11 9.88071 11 8.5V3.5C11 2.11929 9.88071 1 8.5 1H3.5Z" stroke="white" stroke-width="1.5"/>
+                        </svg>
+                    </div>
+                </div>
+                <button
                     class="settings-button"
                     @mouseenter=${(e) => this.showSettingsWindow(e.currentTarget)}
                     @mouseleave=${() => this.hideSettingsWindow()}

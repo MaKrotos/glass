@@ -21,7 +21,7 @@ class Config {
             syncInterval: 0,
             healthCheckInterval: 30 * 1000,
             
-            defaultWindowWidth: 400,
+            defaultWindowWidth: 600,
             defaultWindowHeight: 60,
             
             enableOfflineMode: true,

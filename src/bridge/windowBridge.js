@@ -19,6 +19,7 @@ module.exports = {
     ipcMain.handle('open-personalize-page', () => windowManager.openLoginPage());
     ipcMain.handle('move-window-step', (event, direction) => windowManager.moveWindowStep(direction));
     ipcMain.handle('open-external', (event, url) => shell.openExternal(url));
+    ipcMain.handle('shortcut:toggleMouseDisable', () => windowManager.toggleMouseDisable());
 
     // Newly moved handlers from windowManager
     ipcMain.on('header-state-changed', (event, state) => windowManager.handleHeaderStateChanged(state));

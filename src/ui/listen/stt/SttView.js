@@ -51,6 +51,8 @@ export class SttView extends LitElement {
             margin-bottom: 4px;
             box-sizing: border-box;
             position: relative;
+            user-select: text; /* Allow text selection */
+            cursor: text; /* Show text cursor */
         }
         
         .stt-message .ask-button {
@@ -177,31 +179,6 @@ export class SttView extends LitElement {
         this.handleKeyDown = this.handleKeyDown.bind(this);
         this.handleKeyUp = this.handleKeyUp.bind(this);
         this.handleMessageClick = this.handleMessageClick.bind(this);
-    }
-
-    connectedCallback() {
-        super.connectedCallback();
-        if (window.api) {
-            console.log('[SttView] Setting up connection state change handler');
-            window.api.sttView.onSttUpdate(this.handleSttUpdate);
-            // Добавляем обработчики событий для состояния подключения
-            this.connectionStateChangeHandler = (event, data) => {
-                console.log('[SttView] Received connection state change:', data);
-                const { state, error } = data;
-                console.log(`[SttView] Updating connectionState from ${this.connectionState} to ${state}`);
-                this.connectionState = state;
-                this.connectionError = error || '';
-                this.requestUpdate();
-            };
-            window.api.sttView.onSttConnectionStateChange(this.connectionStateChangeHandler);
-
-            // Request current connection state
-            this.requestCurrentConnectionState();
-        }
-        
-        // Add keyboard event listeners
-        this.addEventListener('keydown', this.handleKeyDown);
-        this.addEventListener('keyup', this.handleKeyUp);
     }
 
     async requestCurrentConnectionState() {
@@ -356,6 +333,17 @@ export class SttView extends LitElement {
         if ((event.ctrlKey || event.metaKey) && event.key === '}') {
             this.sendSelectedMessagesToAskService();
         }
+        
+        // Check for Ctrl + C (or Cmd + C on Mac) for copying
+        if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
+            // The copy event will be handled by the browser's native copy handler
+            // We just need to make sure we don't prevent default behavior
+            const selection = window.getSelection();
+            if (selection.toString().length > 0) {
+                // Let the browser handle the copy
+                return;
+            }
+        }
     }
     
     handleKeyUp(event) {
@@ -365,6 +353,14 @@ export class SttView extends LitElement {
     }
     
     handleMessageClick(messageId, event) {
+        // Check if text is being selected - if so, don't interfere
+        const selection = window.getSelection();
+        if (selection.toString().length > 0) {
+            // Text is selected, let the browser handle it
+            return;
+        }
+        
+        // Only handle Ctrl+Click for message selection
         if (event.ctrlKey || event.metaKey) {
             if (this.selectedMessages.has(messageId)) {
                 this.selectedMessages.delete(messageId);
@@ -373,6 +369,40 @@ export class SttView extends LitElement {
             }
             this.requestUpdate();
         }
+    }
+    
+    connectedCallback() {
+        super.connectedCallback();
+        if (window.api) {
+            console.log('[SttView] Setting up connection state change handler');
+            window.api.sttView.onSttUpdate(this.handleSttUpdate);
+            // Добавляем обработчики событий для состояния подключения
+            this.connectionStateChangeHandler = (event, data) => {
+                console.log('[SttView] Received connection state change:', data);
+                const { state, error } = data;
+                console.log(`[SttView] Updating connectionState from ${this.connectionState} to ${state}`);
+                this.connectionState = state;
+                this.connectionError = error || '';
+                this.requestUpdate();
+            };
+            window.api.sttView.onSttConnectionStateChange(this.connectionStateChangeHandler);
+
+            // Request current connection state
+            this.requestCurrentConnectionState();
+        }
+        
+        // Add keyboard event listeners
+        this.addEventListener('keydown', this.handleKeyDown);
+        this.addEventListener('keyup', this.handleKeyUp);
+        
+        // Add context menu event listener for copy option
+        this.addEventListener('contextmenu', (e) => {
+            const selection = window.getSelection();
+            if (selection.toString().length > 0) {
+                // Text is selected, let the browser handle the context menu
+                return;
+            }
+        });
     }
     
     getSelectedMessagesText() {

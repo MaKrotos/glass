@@ -10,6 +10,7 @@ class ShortcutsService {
         this.mouseEventsIgnored = false;
         this.windowPool = null;
         this.allWindowVisibility = true;
+        this.mouseDisabled = false;
     }
 
     initialize(windowPool) {
@@ -65,12 +66,16 @@ class ShortcutsService {
             moveRight: isMac ? 'Cmd+Right' : 'Ctrl+Right',
             toggleVisibility: isMac ? 'Cmd+\\' : 'Ctrl+\\',
             toggleClickThrough: isMac ? 'Cmd+M' : 'Ctrl+M',
+            toggleMouseDisable: isMac ? 'Cmd+D' : 'Ctrl+D',
             nextStep: isMac ? 'Cmd+Enter' : 'Ctrl+Enter',
             manualScreenshot: isMac ? 'Cmd+Shift+S' : 'Ctrl+Shift+S',
             previousResponse: isMac ? 'Cmd+[' : 'Ctrl+[',
             nextResponse: isMac ? 'Cmd+]' : 'Ctrl+]',
             scrollUp: isMac ? 'Cmd+Shift+Up' : 'Ctrl+Shift+Up',
             scrollDown: isMac ? 'Cmd+Shift+Down' : 'Ctrl+Shift+Down',
+            sendClipboard: isMac ? 'Cmd+Shift+V' : 'Ctrl+Shift+V',
+            increaseOpacity: isMac ? 'Cmd+Shift+]' : 'Ctrl+Shift+]',
+            decreaseOpacity: isMac ? 'Cmd+Shift+[' : 'Ctrl+Shift+[',
         };
     }
 
@@ -250,6 +255,21 @@ class ShortcutsService {
                         }
                      };
                      break;
+                case 'toggleMouseDisable':
+                     callback = () => {
+                        this.mouseDisabled = !this.mouseDisabled;
+                        if(mainWindow && !mainWindow.isDestroyed()){
+                            mainWindow.setIgnoreMouseEvents(this.mouseDisabled, { forward: true });
+                            mainWindow.webContents.send('mouse-disable-toggled', this.mouseDisabled);
+                        }
+                        // Apply to all windows in the pool
+                        this.windowPool.forEach((win, name) => {
+                            if (win && !win.isDestroyed() && name !== 'header') {
+                                win.setIgnoreMouseEvents(this.mouseDisabled, { forward: true });
+                            }
+                        });
+                     };
+                     break;
                 case 'manualScreenshot':
                     callback = () => {
                         if(mainWindow && !mainWindow.isDestroyed()) {
@@ -262,6 +282,50 @@ class ShortcutsService {
                     break;
                 case 'nextResponse':
                     callback = () => sendToRenderer('navigate-next-response');
+                    break;
+                case 'sendClipboard':
+                    callback = async () => {
+                        try {
+                            const clipboardContent = await require('electron').clipboard.readText();
+                            if (clipboardContent.trim()) {
+                                askService.sendMessage(clipboardContent);
+                            }
+                        } catch (error) {
+                            console.error('[Shortcuts] Failed to read clipboard:', error);
+                        }
+                    };
+                    break;
+                case 'increaseOpacity':
+                    callback = () => {
+                        if (mainWindow && !mainWindow.isDestroyed()) {
+                            const currentOpacity = mainWindow.getOpacity();
+                            const newOpacity = Math.min(1.0, currentOpacity + 0.1);
+                            mainWindow.setOpacity(newOpacity);
+                            
+                            // Также изменяем прозрачность дочерних окон
+                            this.windowPool.forEach((win, name) => {
+                                if (win && !win.isDestroyed() && name !== 'header') {
+                                    win.setOpacity(newOpacity);
+                                }
+                            });
+                        }
+                    };
+                    break;
+                case 'decreaseOpacity':
+                    callback = () => {
+                        if (mainWindow && !mainWindow.isDestroyed()) {
+                            const currentOpacity = mainWindow.getOpacity();
+                            const newOpacity = Math.max(0.1, currentOpacity - 0.1);
+                            mainWindow.setOpacity(newOpacity);
+                            
+                            // Также изменяем прозрачность дочерних окон
+                            this.windowPool.forEach((win, name) => {
+                                if (win && !win.isDestroyed() && name !== 'header') {
+                                    win.setOpacity(newOpacity);
+                                }
+                            });
+                        }
+                    };
                     break;
             }
             
